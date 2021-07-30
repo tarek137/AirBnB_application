@@ -1,0 +1,144 @@
+---
+title: "AirBnB"
+output: html_document
+runtime: shiny
+---
+## Data Loading
+Load AirBnB data that contains 2 dataframe as L (with all the information on host, apartment features and Reviews) and R(with information on booking logs)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(ggplot2,dplyr,lubridate,shiny,DT)
+load("C:/Users/TL73/Documents/R/Exam/AirBnB.Rdata")
+L$city<-as.character(L$city)
+L$city[47479]<-c("Paris (prÃ¨s de la  Gare du Nord RER)")
+```
+
+## Filters
+
+```{r filtered, echo=FALSE}
+#room_type
+selectInput("my_room_type","Choose 1 or more options: ",choices = unique(L$room_type),multiple = TRUE,selected = list("Private room","Shared room","Entire home/apt"))
+
+#property_type
+selectInput("my_property_type","Choose 1 or more options: ",choices = unique(L$property_type),multiple = TRUE,selected = list("Apartment","House","Condominium","Loft","Townhouse","Boat","Villa","Tent","Cabin","Tipi","Camper/RV","Cave","Chalet","Treehouse","Earth House","Igloo"))
+
+#bed_type
+selectInput("my_bed_type","Choose 1 or more options: ",choices = unique(L$bed_type),multiple = TRUE,selected = list("Airbed","Pull-out Sofa","Real Bed","Couch","Futon"))
+```
+
+## Relationship between Prices and Apartment features
+
+Property Type
+```{r, echo=FALSE}
+
+property_data<-reactive({
+  filter(L,room_type %in% input$my_room_type & property_type %in% input$my_property_type & bed_type %in% input$my_bed_type)%>%group_by(property_type)%>%summarise(Avg=mean(as.numeric(price)))
+})
+
+
+renderPlot({
+ggplot(property_data(),aes(reorder(property_type,-Avg),Avg,fill=property_type))+geom_bar(stat = "identity")+
+         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+})
+```
+## Relationship between Prices and Apartment features
+
+Room Type
+```{r, echo=FALSE}
+
+room_data<-reactive({
+  filter(L,room_type %in% input$my_room_type & property_type %in% input$my_property_type & bed_type %in% input$my_bed_type)%>%group_by(room_type)%>%summarise(Avg=mean(as.numeric(price)))
+})
+
+
+renderPlot({
+ggplot(room_data(),aes(reorder(room_type,-Avg),Avg,fill=room_type))+geom_bar(stat = "identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+})
+```
+
+
+## Relationship between Prices and Apartment features
+Bedrooms and Accomodations
+```{r, echo=FALSE}
+bed_data<-reactive({
+  filter(L,room_type %in% input$my_room_type & property_type %in% input$my_property_type & bed_type %in% input$my_bed_type)%>%group_by(bed_type)%>%summarise(Avg=mean(as.numeric(price)))
+  })
+
+renderPlot({
+ggplot(bed_data(),
+       aes(reorder(bed_type,-Avg),Avg,fill=bed_type))+geom_bar(stat = "identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+})
+
+
+L$bedrooms<-as.factor(L$bedrooms)
+L$accommodates<-as.factor(L$accommodates)
+L$beds<-as.factor(L$beds)
+
+my_data<-reactive({
+  filter(L,room_type %in% input$my_room_type & property_type %in% input$my_property_type & bed_type %in% input$my_bed_type)
+  })
+
+renderPlot({
+ggplot(my_data(),aes(bedrooms, as.numeric(price)))+geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+ggplot(my_data(),aes(accommodates, as.numeric(price)))+geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+ggplot(my_data(),aes(beds, as.numeric(price)))+geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+})
+```
+## Relationship between Prices and Apartment features
+
+Price with Square Feet and Rating Score
+```{r, echo=FALSE}
+renderPlot({
+ggplot(my_data(),aes(as.numeric(price),square_feet, color=room_type))+geom_point()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+ggplot(my_data(),aes(as.numeric(price),review_scores_rating, color=room_type))+geom_point()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+})
+```
+
+## Number of Apartments per owner
+
+```{r, echo=FALSE}
+apt_per_owner<-reactive({
+  filter(L,room_type %in% input$my_room_type & property_type %in% input$my_property_type & bed_type %in% input$my_bed_type)%>%group_by(host_name)%>%summarize(Count=n())%>%arrange(desc(Count))%>%top_n(50)
+})
+
+renderPlot({
+ggplot(apt_per_owner(),aes(x= reorder(host_name,-Count),Count))+geom_bar(stat ="identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+})
+```
+
+## Renting price per city quarter (“arrondissements”),
+
+```{r, echo=FALSE}
+
+renting_price<-reactive({
+  filter(L,room_type %in% input$my_room_type & property_type %in% input$my_property_type & bed_type %in% input$my_bed_type)%>%group_by(city)%>%summarize(Avg=mean(as.numeric(price)))%>%arrange(desc(Avg))
+  })
+
+renderPlot({
+ggplot(renting_price(),aes(x= reorder(city,-Avg),Avg))+geom_bar(stat ="identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+})
+```
+
+## Visit frequency of the different quarters according to time.
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+R<-R%>%mutate(Qtr=quarter(R$date,with_year=TRUE))
+visit_freq<-R%>%group_by(Qtr)%>%summarise(Visit=n())
+ggplot(visit_freq,aes(Qtr,Visit))+geom_bar(stat ="identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```

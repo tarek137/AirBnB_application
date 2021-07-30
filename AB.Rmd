@@ -1,0 +1,118 @@
+---
+title: "AirBnB"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Loading
+Load AirBnB data that contains 2 dataframe as L (with all the information on host, apartment features and Reviews) and R(with information on booking logs)
+
+```{r}
+load("C:/Users/clear/Desktop/AirBnb/AirBnB.Rdata")
+```
+
+## Relationship between Prices and Apartment features
+
+Property Type
+```{r, echo=FALSE,message=FALSE}
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+ggplot(L%>%group_by(property_type)%>%summarise(Avg=mean(as.numeric(price))),
+       aes(reorder(property_type,-Avg),Avg,fill=property_type))+geom_bar(stat = "identity")+
+         theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+Plot shows that he average price for one night is higher for Tipi > Earth House > Cabin while as Villa, tent and Cave has the lowest average price
+
+
+## Relationship between Prices and Apartment features
+
+Room Type
+```{r, echo=FALSE,message=FALSE}
+ggplot(L%>%group_by(room_type)%>%summarise(Avg=mean(as.numeric(price))),
+       aes(reorder(room_type,-Avg),Avg,fill=room_type))+geom_bar(stat = "identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+Private Rooms ave more average cost as compared to entire apartment or shared room
+
+
+
+## Relationship between Prices and Apartment features
+Bedrooms and Accomodations
+```{r, echo=FALSE,message=FALSE}
+ggplot(L%>%group_by(bed_type)%>%summarise(Avg=mean(as.numeric(price))),
+       aes(reorder(bed_type,-Avg),Avg,fill=bed_type))+geom_bar(stat = "identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+L$bedrooms<-as.factor(L$bedrooms)
+ggplot(L,aes(bedrooms, as.numeric(price)))+geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+L$accommodates<-as.factor(L$accommodates)
+ggplot(L,aes(accommodates, as.numeric(price)))+geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+L$beds<-as.factor(L$beds)
+ggplot(L,aes(beds, as.numeric(price)))+geom_boxplot()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+Rooms with bed tyoe as couch has more price per night as compared to the airbed. Also from the box plot of bedrooms vs price, we can say that accomodation with bedrooms 1,6,9,10 has highest average price but for 1 & 6, the interquartile range is wide which means that the prices vary as per time/season but if we check for rooms with bedrooms 9 or 10, there is a very narrow variation in prices throughout the timeline.
+
+From the Accomodation box plot, we an see that with increase in the number of people to accomodate, there is an increase in average price trend which is also high for accomodations with 1 or 2 people. The reason for this price hike may be due to the inlusion of price increase during events or some special occasions.Number of beds show the same trend as in acomodations.
+
+## Relationship between Prices and Apartment features
+
+Price with Square Feet and Rating Score
+```{r, echo=FALSE,message=FALSE}
+ggplot(L[L$square_feet<2000,],aes(as.numeric(price),square_feet, color=room_type))+geom_point()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+ggplot(L,aes(as.numeric(price),review_scores_rating, color=room_type))+geom_point()+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+The scatterplot for Price vs Square feet and Price vs Ratings shows no correlation. THis means that there is no relationship between the square footage or Ratings with price.
+
+
+## Number of Apartments per owner
+
+```{r, echo=FALSE,message=FALSE}
+apt_per_owner<-L%>%group_by(host_name)%>%summarize(Count=n())
+apt_per_owner<-apt_per_owner[apt_per_owner$host_name!="",]
+apt_per_owner<-apt_per_owner[order(apt_per_owner$Count,decreasing = TRUE),]
+ggplot(apt_per_owner[1:50,],aes(x= reorder(host_name,-Count),Count))+geom_bar(stat ="identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+
+## Renting price per city quarter (“arrondissements”),
+
+The plot shows the list of hosts with total number of Apartments. Here we can see that Marie has about 580 apartments follwoed by Nicholas with about 420 apartments and so on.
+
+
+```{r, echo=FALSE,message=FALSE}
+renting_price<-L%>%group_by(city)%>%summarize(Avg=mean(as.numeric(price)))
+renting_price<-renting_price[renting_price$city!="",]
+renting_price<-renting_price[order(renting_price$Avg,decreasing = TRUE),]
+renting_price$city<-as.character(renting_price$city)
+renting_price$city[127]<-c("Paris (prÃ¨s de la  Gare du Nord RER)")
+ggplot(renting_price,aes(x= reorder(city,-Avg),Avg))+geom_bar(stat ="identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+This plot shows the average price of each areas in the city of paris. Issy les Moulineaux has the highest average per night price of about 480.
+
+
+## Visit frequency of the different quarters according to time.
+
+```{r, echo=FALSE,message=FALSE}
+R<-R%>%mutate(Qtr=quarter(R$date,with_year=TRUE))
+visit_freq<-R%>%group_by(Qtr)%>%summarise(Visit=n())
+ggplot(visit_freq,aes(Qtr,Visit))+geom_bar(stat ="identity")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+
+The plot shows that the total number of checking have increased exponentially over the years (2009-2015). The quarterly data says that Q4 has the highest visits throughout the timeline till 2015. The last 2 quarters has shown the increase in visits in Q3.
